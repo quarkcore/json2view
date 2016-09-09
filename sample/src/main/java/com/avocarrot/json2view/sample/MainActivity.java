@@ -8,7 +8,6 @@ import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Toast;
 
 import com.avocarrot.json2view.DynamicView;
 import com.avocarrot.json2view.DynamicViewId;
@@ -19,6 +18,7 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
 
 public class MainActivity extends ActionBarActivity implements View.OnClickListener {
 
@@ -40,13 +40,22 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         if (jsonObject != null) {
 
             /* create dynamic view and return the view with the holder class attached as tag */
-            View sampleView = DynamicView.createView(this, jsonObject, SampleViewHolder.class);
+			Constructor cons = null;
+			try {
+				cons = DynamicView.createConstructor(SampleViewHolder.class, String.class, Integer.class);
+			} catch (NoSuchMethodException e) {
+				e.printStackTrace();
+			}
+
+			if(cons != null){
+				View sampleView = DynamicView.createView(this, jsonObject, null, cons, "String", 42);
             /* get the view with id "testClick" and attach the onClickListener */
-            ((SampleViewHolder) sampleView.getTag()).clickableView.setOnClickListener(this);
+				((SampleViewHolder) sampleView.getTag()).clickableView.setOnClickListener(this);
 
             /* add Layout Parameters in just created view and set as the contentView of the activity */
-            sampleView.setLayoutParams(new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT));
-            setContentView(sampleView);
+				sampleView.setLayoutParams(new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT));
+				setContentView(sampleView);
+			}
 
         } else {
             Log.e("Json2View", "Could not load valid json file");
@@ -98,6 +107,10 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
 
         public SampleViewHolder() {
         }
+
+		public SampleViewHolder(String blub, Integer number) {
+			Log.d("MainActivity", blub + " " + number);
+		}
     }
 
 }

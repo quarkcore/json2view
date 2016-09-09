@@ -2,6 +2,7 @@ package com.avocarrot.json2view;
 
 import android.content.Context;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -9,6 +10,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,10 +22,12 @@ import java.util.List;
  */
 public class DynamicView {
 
+	public static int STRING_ID_TAG = 0x7f020001;
+
     static int mCurrentId = 13;
     static int INTERNAL_TAG_ID = 0x7f020000;
 
-    /**
+	/**
      * @param jsonObject : json object
      * @param holderClass : class that will be created as an holder and attached as a tag in the View
      * @return the view that created
@@ -40,43 +44,76 @@ public class DynamicView {
      */
     public static View createView (Context context, JSONObject jsonObject, ViewGroup parent, Class holderClass) {
 
-        if (jsonObject==null)
-            return null;
+		if (jsonObject==null)
+			return null;
 
-        HashMap<String, Integer> ids = new HashMap<>();
+		HashMap<String, Integer> ids = new HashMap<>();
 
-        View container = createViewInternal(context, jsonObject, parent, ids);
+		View container = createViewInternal(context, jsonObject, parent, ids);
 
-        if (container==null)
-            return null;
+		if (container==null)
+			return null;
 
-        if (container.getTag(INTERNAL_TAG_ID) != null)
-            DynamicHelper.applyLayoutProperties(container, (List<DynamicProperty>) container.getTag(INTERNAL_TAG_ID), parent, ids);
+		if (container.getTag(INTERNAL_TAG_ID) != null)
+			DynamicHelper.applyLayoutProperties(container, (List<DynamicProperty>) container.getTag(INTERNAL_TAG_ID), parent, ids);
 
         /* clear tag from properties */
-        container.setTag(INTERNAL_TAG_ID, null);
+		container.setTag(INTERNAL_TAG_ID, null);
 
-        if (holderClass!= null) {
+		if (holderClass!= null) {
+			try {
+				Object holder = holderClass.getConstructor().newInstance();
+				DynamicHelper.parseDynamicView(holder, container, ids);
+				container.setTag(holder);
+			} catch (InstantiationException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			} catch (NoSuchMethodException e) {
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				e.printStackTrace();
+			}
 
-            try {
-                Object holder = holderClass.getConstructor().newInstance();
-                DynamicHelper.parseDynamicView(holder, container, ids);
-                container.setTag(holder);
-            } catch (InstantiationException e) {
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            }
+		}
 
-        }
+		return container;
 
-        return container;
+	}
 
-    }
+	public static View createView (Context context, JSONObject jsonObject, ViewGroup parent, Constructor constructor, Object... constructorParams) {
+
+		if (jsonObject==null)
+			return null;
+
+		HashMap<String, Integer> ids = new HashMap<>();
+
+		View container = createViewInternal(context, jsonObject, parent, ids);
+
+		if (container==null)
+			return null;
+
+		if (container.getTag(INTERNAL_TAG_ID) != null)
+			DynamicHelper.applyLayoutProperties(container, (List<DynamicProperty>) container.getTag(INTERNAL_TAG_ID), parent, ids);
+
+        /* clear tag from properties */
+		container.setTag(INTERNAL_TAG_ID, null);
+
+		try {
+			Object holder = constructor.newInstance(constructorParams);
+			DynamicHelper.parseDynamicView(holder, container, ids);
+			container.setTag(holder);
+		} catch (InstantiationException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			e.printStackTrace();
+		}
+
+		return container;
+
+	}
 
     /**
      * @param jsonObject : json object
@@ -154,6 +191,7 @@ public class DynamicView {
 
             /* add and integer as a universal id  and keep it in a hashmap */
             String id = DynamicHelper.applyStyleProperties(view, properties);
+			view.setTag(STRING_ID_TAG, id);
             if (!TextUtils.isEmpty(id)) {
                 /* to target older versions we cannot use View.generateViewId();  */
                 ids.put(id, mCurrentId);
@@ -195,5 +233,9 @@ public class DynamicView {
         return view;
 
     }
+
+	public static Constructor createConstructor(Class clazz, Class<?>... argumentTypes) throws NoSuchMethodException {
+		return clazz.getConstructor(argumentTypes);
+	}
 
 }
