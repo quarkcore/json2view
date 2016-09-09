@@ -11,6 +11,7 @@ import android.view.WindowManager;
 
 import com.avocarrot.json2view.DynamicView;
 import com.avocarrot.json2view.DynamicViewId;
+import com.avocarrot.json2view.DynamicViewListener;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,8 +20,9 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 
-public class MainActivity extends ActionBarActivity implements View.OnClickListener {
+public class MainActivity extends ActionBarActivity implements View.OnClickListener, DynamicViewListener{
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,23 +41,14 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
 
         if (jsonObject != null) {
 
-            /* create dynamic view and return the view with the holder class attached as tag */
-			Constructor cons = null;
-			try {
-				cons = DynamicView.createConstructor(SampleViewHolder.class, String.class, Integer.class);
-			} catch (NoSuchMethodException e) {
-				e.printStackTrace();
-			}
-
-			if(cons != null){
-				View sampleView = DynamicView.createView(this, jsonObject, null, cons, "String", 42);
-            /* get the view with id "testClick" and attach the onClickListener */
+			/* create dynamic view and return the view with the holder class attached as tag */
+				View sampleView = DynamicView.createView(this, jsonObject, null, this);
+			/* get the view with id "testClick" and attach the onClickListener */
 				((SampleViewHolder) sampleView.getTag()).clickableView.setOnClickListener(this);
 
-            /* add Layout Parameters in just created view and set as the contentView of the activity */
+			/* add Layout Parameters in just created view and set as the contentView of the activity */
 				sampleView.setLayoutParams(new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT));
 				setContentView(sampleView);
-			}
 
         } else {
             Log.e("Json2View", "Could not load valid json file");
@@ -98,7 +91,29 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
         return returnString.toString();
     }
 
-    /**
+	@Override
+	public Object getViewHolderParams(View generatedParent) {
+		try {
+			Constructor constructor = DynamicView.createConstructor(SampleViewHolder.class, View.class);
+			try {
+				return constructor.newInstance(generatedParent);
+			} catch (InstantiationException e) {
+				e.printStackTrace();
+				return null;
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+				return null;
+			} catch (InvocationTargetException e) {
+				e.printStackTrace();
+				return null;
+			}
+		} catch (NoSuchMethodException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	/**
      * Holder class that keep UI Component from the Dynamic View
      */
     static public class SampleViewHolder {
