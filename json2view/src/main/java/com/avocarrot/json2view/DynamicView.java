@@ -81,7 +81,7 @@ public class DynamicView {
 
 	}
 
-	public static View createView (Context context, JSONObject jsonObject, ViewGroup parent, Constructor constructor, Object... constructorParams) {
+	public static View createView (Context context, JSONObject jsonObject, ViewGroup parent, DynamicViewListener dynamicViewListener) {
 
 		if (jsonObject==null)
 			return null;
@@ -99,16 +99,11 @@ public class DynamicView {
         /* clear tag from properties */
 		container.setTag(INTERNAL_TAG_ID, null);
 
-		try {
-			Object holder = constructor.newInstance(constructorParams);
+
+		Object holder = dynamicViewListener.getViewHolderParams(container);
+		if(holder != null){
 			DynamicHelper.parseDynamicView(holder, container, ids);
 			container.setTag(holder);
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
 		}
 
 		return container;
@@ -121,7 +116,7 @@ public class DynamicView {
      * @return the view that created
      */
     public static View createView (Context context, JSONObject jsonObject, ViewGroup parent) {
-        return createView(context, jsonObject, parent, null);
+        return createView(context, jsonObject, parent);
     }
 
     /**
@@ -129,7 +124,7 @@ public class DynamicView {
      * @return the view that created
      */
     public static View createView (Context context, JSONObject jsonObject) {
-        return createView(context, jsonObject, null, null);
+        return createView(context, jsonObject);
     }
 
     /**
